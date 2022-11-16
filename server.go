@@ -4,6 +4,8 @@ import "net/http"
 
 type HandleFunc func(ctx *Context)
 
+type HTTPServerOption func(server *HTTPServer)
+
 type Server interface {
 	http.Handler
 	// Start 启动服务器
@@ -23,11 +25,24 @@ var _ Server = &HTTPServer{}
 
 type HTTPServer struct {
 	router
+
+	// 在server层面支持middleware
+	mdls []Middleware
 }
 
-func NewHTTPServer() *HTTPServer {
-	return &HTTPServer{
+func NewHTTPServer(opts ...HTTPServerOption) *HTTPServer {
+	res := &HTTPServer{
 		router: newRouter(),
+	}
+	for _, opt := range opts {
+		opt(res)
+	}
+	return res
+}
+
+func ServerWithMiddleware(mdls ...Middleware) HTTPServerOption {
+	return func(server *HTTPServer) {
+		server.mdls = mdls
 	}
 }
 
@@ -37,7 +52,15 @@ func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 		Req:  request,
 		Resp: writer,
 	}
-	s.serve(ctx)
+	// 最后一个是这个
+	root := s.serve
+	// 从后往前
+	// 把后一个当作前一个的next组装成链条
+	for i := len(s.mdls) - 1; i >= 0; i-- {
+		root = s.mdls[i](root)
+	}
+	// 这里执行的时候，就是从前往后了
+	root(ctx)
 }
 
 // Start 启动服务器
@@ -61,5 +84,6 @@ func (s *HTTPServer) serve(ctx *Context) {
 		return
 	}
 	ctx.PathParams = mi.pathParams
+	ctx.MatchedRoute = mi.n.route
 	mi.n.handler(ctx)
 }

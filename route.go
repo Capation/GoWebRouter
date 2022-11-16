@@ -49,6 +49,7 @@ func (r *router) addRoute(method string, path string, handler HandleFunc) {
 			panic("web: 路由冲突[/]")
 		}
 		root.handler = handler
+		root.route = "/"
 		return
 	}
 
@@ -64,6 +65,7 @@ func (r *router) addRoute(method string, path string, handler HandleFunc) {
 		panic(fmt.Sprintf("web: 路由冲突[%s]", path))
 	}
 	root.handler = handler
+	root.route = path
 }
 
 // findRoute 查找对应的节点
@@ -122,6 +124,9 @@ const (
 type node struct {
 	typ nodeType
 
+	route string
+
+	// 表示当前的
 	path string
 	// children 子节点
 	// 子节点的 path => node

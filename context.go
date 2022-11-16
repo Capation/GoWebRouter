@@ -14,6 +14,8 @@ type Context struct {
 	PathParams map[string]string
 
 	queryValues url.Values
+
+	MatchedRoute string
 }
 
 func (c *Context) SetCookie(ck *http.Cookie) {
