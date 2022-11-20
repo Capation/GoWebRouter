@@ -25,7 +25,7 @@ func newRouter() router {
 // - 不能在同一个位置注册不同的参数路由，例如 /user/:id 和 /user/:name 冲突
 // - 不能在同一个位置同时注册通配符路由和参数路由，例如 /user/:id 和 /user/* 冲突
 // - 同名路径参数，在路由匹配的时候，值会被覆盖。例如 /user/:id/abc/:id，那么 /user/123/abc/456 最终 id = 456
-func (r *router) addRoute(method string, path string, handler HandleFunc) {
+func (r *router) addRoute(method string, path string, handler HandleFunc, mdls ...Middleware) {
 	if path == "" {
 		panic("web: 路由是空字符串")
 	}
@@ -77,28 +77,32 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 	}
 
 	if path == "/" {
-		return &matchInfo{n: root}, true
+		return &matchInfo{n: root, mdls: root.mdls}, true
 	}
 
 	segs := strings.Split(strings.Trim(path, "/"), "/")
 	mi := &matchInfo{}
+	cur := root
 	for _, s := range segs {
+		var matchParam bool
 		var child *node
-		child, ok = root.childOf(s)
+		cur, matchParam, ok = root.childOf(s)
 		if !ok {
-			if root.typ == nodeTypeAny {
-				mi.n = root
-				return mi, true
-			}
 			return nil, false
 		}
-		if child.paramName != "" {
-			mi.addValue(child.paramName, s)
+		if matchParam {
+			mi.addValue(root.path[1:], s)
 		}
 		root = child
 	}
-	mi.n = root
+	mi.n = cur
+	mi.mdls = r.findMdls(root, segs)
 	return mi, true
+}
+
+func (r *router) findMdls(root *node, segs []string) []Middleware {
+	// 层次遍历
+
 }
 
 type nodeType int
@@ -144,20 +148,28 @@ type node struct {
 	// 正则表达式
 	regChild *node
 	regExpr  *regexp.Regexp
+
+	mdls []Middleware
 }
 
 // child 返回子节点
 // 第一个返回值 *node 是命中的节点
 // 第二个返回值 bool 代表是否命中
-func (n *node) childOf(path string) (*node, bool) {
+func (n *node) childOf(path string) (*node, bool, bool) {
 	if n.children == nil {
-		return n.childOfNonStatic(path)
+		if n.paramChild != nil {
+			return n.paramChild, true, true
+		}
+		return n.starChild, false, n.starChild != nil
 	}
 	res, ok := n.children[path]
 	if !ok {
-		return n.childOfNonStatic(path)
+		if n.paramChild != nil {
+			return n.paramChild, true, true
+		}
+		return n.starChild, false, n.starChild != nil
 	}
-	return res, ok
+	return res, false, ok
 }
 
 // childOfNonStatic 从非静态匹配的子节点里面查找
@@ -270,6 +282,7 @@ func (n *node) parseParam(path string) (string, string, bool) {
 type matchInfo struct {
 	n          *node
 	pathParams map[string]string
+	mdls       []Middleware
 }
 
 func (m *matchInfo) addValue(key string, value string) {
