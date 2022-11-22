@@ -96,14 +96,14 @@ func (r *router) findRoute(method string, path string) (*matchInfo, bool) {
 		root = child
 	}
 	mi.n = cur
-	mi.mdls = r.findMdls(root, segs)
+	//mi.mdls = r.findMdls(root, segs)
 	return mi, true
 }
 
-func (r *router) findMdls(root *node, segs []string) []Middleware {
-	// 层次遍历
-
-}
+//func (r *router) findMdls(root *node, segs []string) []Middleware {
+//	// 层次遍历
+//
+//}
 
 type nodeType int
 

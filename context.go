@@ -25,6 +25,19 @@ type Context struct {
 	queryValues url.Values
 
 	MatchedRoute string
+
+	tplEngine TemplateEngine
+}
+
+func (c *Context) Render(tplName string, data any) error {
+	var err error
+	c.RespData, err = c.tplEngine.Render(c.Req.Context(), tplName, data)
+	if err != nil {
+		c.RespStatusCode = http.StatusInternalServerError
+		return err
+	}
+	c.RespStatusCode = http.StatusOK
+	return nil
 }
 
 func (c *Context) SetCookie(ck *http.Cookie) {
