@@ -1,0 +1,32 @@
+初始化本地git仓库   git init
+查看与github是否连接成功   ssh -T git@github.com
+git status
+git add .
+git commit -m ""
+
+与远程仓库建立连接
+git remote add origin <ssh的github地址>
+
+推送仓库
+git push -u origin main
+
+查看所有分支
+git branch -a
+
+切换分支
+git branch 分支名
+
+failed to push some refs to……………………:
+git pull --rebase origin master
+
+拉取远程指定分支下的代码：
+git clone -b "分支名称" 仓库路径
+
+git branch -M main
+
+
+
+
+
+
+

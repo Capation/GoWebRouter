@@ -6,10 +6,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"html/template"
 	"log"
+	"mime/multipart"
+	"path/filepath"
 	"testing"
 )
 
-func TestLoginPage(t *testing.T) {
+func TestPostPage(t *testing.T) {
 
 	tpl, err := template.ParseGlob("testdata/tpls/*.gohtml")
 	require.NoError(t, err)
@@ -24,9 +26,27 @@ func TestLoginPage(t *testing.T) {
 		}
 	})
 
-	fu := FileUpload{}
+	fu := FileUpload{
+		// <input type="file" name="myfile" />
+		FileField: "myfile",
+		DstPathFunc: func(header *multipart.FileHeader) string {
+			return filepath.Join("testdata", "upload", header.Filename)
+		},
+	}
 
 	// 上传文件
 	s.Post("/upload", fu.Handle())
+	s.Start(":8081")
+}
+
+func TestDownload(t *testing.T) {
+
+	s := NewHTTPServer()
+
+	fu := FileDownloader{
+		Dir: filepath.Join("testdata", "download"),
+	}
+
+	s.Get("/download", fu.Handle())
 	s.Start(":8081")
 }
