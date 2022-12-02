@@ -50,3 +50,16 @@ func TestDownload(t *testing.T) {
 	s.Get("/download", fu.Handle())
 	s.Start(":8081")
 }
+
+func TestStaticResourceHandler_Handle(t *testing.T) {
+
+	s := NewHTTPServer()
+
+	sr := NewStaticResourceHandler(
+		filepath.Join("testdata", "static"),
+	)
+
+	// localhost:8081/static/xxx.jpg
+	s.Get("/static/:file", sr.Handle)
+	s.Start(":8081")
+}

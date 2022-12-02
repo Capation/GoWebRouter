@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 type FileUpload struct {
@@ -116,4 +117,53 @@ func (d FileDownloader) Handle() HandleFunc {
 
 		http.ServeFile(ctx.Resp, ctx.Req, dst)
 	}
+}
+
+type StaticResourceHandler struct {
+	dir               string
+	extContentTypeMap map[string]string
+}
+
+func NewStaticResourceHandler(dir string) *StaticResourceHandler {
+	res := &StaticResourceHandler{
+		dir: dir,
+		extContentTypeMap: map[string]string{
+			"png":  "image/png",
+			"jpeg": "image/jpeg",
+			"jpe":  "image/jpeg",
+			"jpg":  "image/jpeg",
+			"pdf":  "image/pdf",
+		},
+	}
+	return res
+}
+
+func (s *StaticResourceHandler) Handle(ctx *Context) {
+
+	// 1、拿到目标文件名
+	// 2、定位到目标文件，并读出来
+	// 3、返回给前端
+	file, err := ctx.PathValue("file")
+	if err != nil {
+		ctx.RespStatusCode = http.StatusBadRequest
+		ctx.RespData = []byte("请求路径不对")
+		return
+	}
+
+	dst := filepath.Join(s.dir, file)
+	data, err := os.ReadFile(dst)
+	if err != nil {
+		ctx.RespStatusCode = http.StatusInternalServerError
+		ctx.RespData = []byte("服务器错误")
+		return
+	}
+	ext := filepath.Ext(dst)
+
+	header := ctx.Resp.Header()
+	// 可能的Content-Type有 文本文件，图片，视频，音频
+	header.Set("Content-Type", s.extContentTypeMap[ext])
+	header.Set("content-Length", strconv.Itoa(len(data)))
+
+	ctx.RespData = data
+	ctx.RespStatusCode = http.StatusOK
 }
