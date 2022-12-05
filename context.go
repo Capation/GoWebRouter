@@ -27,6 +27,9 @@ type Context struct {
 	MatchedRoute string
 
 	tplEngine TemplateEngine
+
+	// 缓存住的session
+	UserValues map[string]any
 }
 
 func (c *Context) Render(tplName string, data any) error {
