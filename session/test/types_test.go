@@ -1,14 +1,22 @@
-package session
+package test
 
 import (
 	web "Go_Web"
+	"Go_Web/session"
+	"Go_Web/session/cookie"
+	"Go_Web/session/memory"
 	"net/http"
 	"testing"
+	"time"
 )
 
 func TestSession(t *testing.T) {
 
-	var m Manager
+	var m *session.Manager = &session.Manager{
+		Propagator: cookie.NewPropagator(),
+		Store:      memory.NewStore(time.Minute * 15),
+		CtxSessKey: "sessKey",
+	}
 
 	server := web.NewHTTPServer(web.ServerWithMiddleware(func(next web.HandleFunc) web.HandleFunc {
 		return func(ctx *web.Context) {
@@ -69,7 +77,9 @@ func TestSession(t *testing.T) {
 
 	server.Get("/user", func(ctx *web.Context) {
 		sess, _ := m.GetSession(ctx)
-		sess.Get(ctx.Req.Context(), "nickname")
+		// 假如说我要把昵称从session中拿出来
+		val, _ := sess.Get(ctx.Req.Context(), "nickname")
+		ctx.RespData = []byte(val.(string))
 	})
 
 	server.Start(":8081")
